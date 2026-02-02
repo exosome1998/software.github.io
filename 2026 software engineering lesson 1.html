@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSC Cyber Lab: SQL Injection</title>
+    <style>
+        :root {
+            --primary: #0056b3; /* School Blue */
+            --alert: #d9534f;   /* Error Red */
+            --safe: #5cb85c;    /* Success Green */
+            --bg: #f4f6f9;
+            --text: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 { text-align: center; color: var(--primary); border-bottom: 2px solid #ddd; padding-bottom: 20px; }
+        h2 { color: var(--primary); margin-top: 40px; background: #e9ecef; padding: 10px; border-left: 5px solid var(--primary); }
+        h3 { color: #333; margin-top: 25px; }
+
+        /* Step Instructions */
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fff;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #2d2d2d;
+            color: #ccc;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', monospace;
+            border-left: 5px solid #777;
+        }
+        .bad { border-left-color: var(--alert); }
+        .good { border-left-color: var(--safe); }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
+        th { background-color: var(--primary); color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+
+        /* Terminal */
+        .terminal {
+            background: black;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+
+        /* Quiz */
+        details {
+            background: #fff;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        summary { font-weight: bold; cursor: pointer; }
+        .answer { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; color: #006600; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>💉 Lab: SQL Injection (Signup Form)</h1>
+    <p><strong>Goal:</strong> You will learn how hackers break into databases using text inputs, and then you will write secure code to stop them.</p>
+
+    <h2>1. Quick Setup</h2>
+    <div class="step">
+        <p><strong>Step A:</strong> Open your GitHub Codespace.</p>
+        <p><strong>Step B:</strong> Copy and paste this into the Terminal (black box at the bottom) to install the tools:</p>
+        <div class="terminal">pip install -r requirements.txt</div>
+        <p><strong>Step C:</strong> Start the website:</p>
+        <div class="terminal">python3 main.py</div>
+        <p><em>Click "Open in Browser" when the popup appears.</em></p>
+    </div>
+
+    <h2>2. The Vulnerability</h2>
+    <p>The website uses a database to store users. When you sign up, the website writes a command (Query) to save your name.</p>
+    
+    
+
+    <h3>The Broken Code</h3>
+    <p>Open <code>main.py</code>. Find the Signup section (lines 40-50). Look at this code:</p>
+    <pre class="bad">
+# VULNERABLE CODE
+query = f"INSERT INTO users (user, pass) VALUES ('{username}', '{password}')"
+</pre>
+    <p><strong>Why is this bad?</strong> The code takes your username exactly as you typed it and "glues" it inside the database command. If you type special database symbols (like quotes), you can change the command's meaning.</p>
+
+    <h2>3. The Exploit (Try to Hack It)</h2>
+    <p>Go to the <strong>Signup Page</strong> on your running website. Try the following experiments carefully.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Experiment</th>
+                <th>Enter Username</th>
+                <th>Enter Password</th>
+                <th>Expected Result & Explanation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1. Normal User</strong></td>
+                <td><code>JohnDoe</code></td>
+                <td><code>password123</code></td>
+                <td><strong>Success.</strong><br>The website creates the user "JohnDoe". This confirms the site works normally.</td>
+            </tr>
+            <tr>
+                <td><strong>2. The Crash Test</strong></td>
+                <td><code>Admin'</code></td>
+                <td><code>anything</code></td>
+                <td><strong>500 Error (Crash).</strong><br>You inserted a single quote <code>'</code>. This breaks the syntax because the database now sees 3 quotes instead of 2. <br><em>If a site crashes when you type a quote, it is vulnerable!</em></td>
+            </tr>
+            <tr>
+                <td><strong>3. The Injection</strong></td>
+                <td><code>hack', '123') --</code></td>
+                <td><code>nothing</code></td>
+                <td><strong>Success (User Created).</strong><br>
+                <strong>What happened?</strong> You wrote your own database command inside the name box.<br>
+                1. <code>hack</code> starts the name.<br>
+                2. <code>'</code> closes the name field.<br>
+                3. <code>, '123'</code> creates a fake password.<br>
+                4. <code>)</code> closes the command.<br>
+                5. <code>--</code> deletes the real code that followed.<br>
+                You registered a user without the website's permission rules!</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>4. The Fix (Secure Coding)</h2>
+    <p>We need to stop the database from treating user input as code. We will use <strong>Parameterized Queries</strong> (Placeholders).</p>
+    
+    
+
+    <h3>Modify main.py</h3>
+    <p>Delete the bad line (the one starting with <code>query = f"..."</code>) and replace it with this:</p>
+    <pre class="good">
+# SECURE CODE
+# The '?' acts like a safe container.
+query = "INSERT INTO users (user, pass) VALUES (?, ?)"
+
+# We send the data separately from the command
+cursor.execute(query, (username, password))
+</pre>
+
+    <h3>Verify the Fix</h3>
+    <ol>
+        <li>Go to the Terminal and press <code>Ctrl + C</code> to stop the server.</li>
+        <li>Type <code>python3 main.py</code> to start it again.</li>
+        <li>Go to the website and try the hack again: <strong>Username:</strong> <code>hack', '123') --</code></li>
+        <li><strong>Result:</strong> It should <strong>NOT</strong> crash or hack the logic. It should just create a user with that weird name. The <code>'</code> and <code>--</code> are now treated as harmless text.</li>
+    </ol>
+
+    <h2>5. Save Your Work</h2>
+    <p>In the Terminal, run these commands to save your security patch:</p>
+    <div class="terminal">git add main.py</div>
+    <div class="terminal">git commit -m "Fixed SQL Injection in Signup form"</div>
+    <div class="terminal">git push</div>
+
+    <h2>6. Assessment (HSC Style)</h2>
+    
+    <h3>Part A: Multiple Choice</h3>
+
+    <details>
+        <summary>Q1. Which character is most commonly used to test if a website has an SQL Injection vulnerability?</summary>
+        <div class="answer">
+            <strong>Answer: Single Quote (')</strong><br>
+            In SQL, single quotes are used to wrap text. Inserting one manually often breaks the code structure, causing an error that reveals the vulnerability.
+        </div>
+    </details>
+
+    <details>
+        <summary>Q2. What is the purpose of the double dash (--) in an SQL Injection attack?</summary>
+        <div class="answer">
+            <strong>Answer: To comment out the rest of the query.</strong><br>
+            It tells the database to ignore any code that comes after it. Attackers use this to bypass password checks or prevent syntax errors from occurring after their injected code.
+        </div>
+    </details>
+
+    <details>
+        <summary>Q3. Why are "Parameterized Queries" (using ?) considered the best fix?</summary>
+        <div class="answer">
+            <strong>Answer: They separate code from data.</strong><br>
+            The database receives the command structure first, and the user input is inserted later strictly as text data. This prevents the input from ever being executed as a command.
+        </div>
+    </details>
+
+    <h3>Part B: Short Answer</h3>
+
+    <details>
+        <summary>Q4. Explain why string concatenation (f-strings) is dangerous when handling user input.</summary>
+        <div class="answer">
+            <strong>Answer:</strong> String concatenation combines the user's input directly with the program's code before the computer reads it. If the input contains code symbols (like quotes or semicolons), the computer cannot distinguish between the original program instructions and the user's input, leading it to execute the user's malicious commands.
+        </div>
+    </details>
+
+    <details>
+        <summary>Q5. Describe the result of the "Crash Test" (entering <code>Admin'</code>) before and after applying the fix.</summary>
+        <div class="answer">
+            <strong>Answer:</strong><br>
+            <strong>Before Fix:</strong> The application crashes (500 Internal Server Error) because the single quote creates invalid SQL syntax (unbalanced quotes).<br>
+            <strong>After Fix:</strong> The application runs successfully and creates a user named literally <code>Admin'</code>. The parameterized query treats the quote as just a character in the name, not a command.
+        </div>
+    </details>
+
+</div>
+
+</body>
+</html>
